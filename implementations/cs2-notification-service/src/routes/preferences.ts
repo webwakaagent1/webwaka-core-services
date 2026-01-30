@@ -57,7 +57,13 @@ router.get('/user/:userId', async (req: Request, res: Response, next: NextFuncti
 
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const preference = await preferenceService.getPreference(req.params.id);
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    const preference = await preferenceService.getPreference(req.params.id, tenantId);
     if (!preference) {
       res.status(404).json({ error: 'Preference not found' });
       return;
@@ -70,13 +76,19 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.query.tenantId as string || req.body.tenantId;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
     const { error, value } = updatePreferenceSchema.validate(req.body);
     if (error) {
       res.status(400).json({ error: error.details[0].message });
       return;
     }
 
-    const preference = await preferenceService.updatePreference(req.params.id, value);
+    const preference = await preferenceService.updatePreference(req.params.id, value, tenantId);
     res.json({ data: preference });
   } catch (err) {
     next(err);
@@ -85,7 +97,13 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await preferenceService.deletePreference(req.params.id);
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    await preferenceService.deletePreference(req.params.id, tenantId);
     res.status(204).send();
   } catch (err) {
     next(err);

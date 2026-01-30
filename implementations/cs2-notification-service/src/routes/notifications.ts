@@ -36,10 +36,16 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
     const limit = parseInt(req.query.limit as string) || 100;
     const offset = parseInt(req.query.offset as string) || 0;
     const filter = {
-      tenantId: req.query.tenantId as string | undefined,
+      tenantId,
       userId: req.query.userId as string | undefined,
       channel: req.query.channel as NotificationChannel | undefined,
       status: req.query.status as NotificationStatus | undefined,
@@ -55,8 +61,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
     const filter = {
-      tenantId: req.query.tenantId as string | undefined,
+      tenantId,
       channel: req.query.channel as NotificationChannel | undefined,
       startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
       endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
@@ -71,7 +83,13 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const notification = await notificationService.getNotification(req.params.id);
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    const notification = await notificationService.getNotification(req.params.id, tenantId);
     if (!notification) {
       res.status(404).json({ error: 'Notification not found' });
       return;
@@ -84,7 +102,13 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const notification = await notificationService.cancelNotification(req.params.id);
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    const notification = await notificationService.cancelNotification(req.params.id, tenantId);
     res.json({ data: notification, message: 'Notification cancelled' });
   } catch (err) {
     next(err);
@@ -93,7 +117,13 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
 
 router.get('/:id/delivery-logs', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const logs = await deliveryService.getDeliveryLogs(req.params.id);
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    const logs = await deliveryService.getDeliveryLogs(req.params.id, tenantId);
     res.json({ data: logs });
   } catch (err) {
     next(err);
@@ -102,7 +132,13 @@ router.get('/:id/delivery-logs', async (req: Request, res: Response, next: NextF
 
 router.post('/:id/track/open', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await deliveryService.trackOpen(req.params.id);
+    const tenantId = req.query.tenantId as string || req.body.tenantId;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
+    await deliveryService.trackOpen(req.params.id, tenantId);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -111,8 +147,14 @@ router.post('/:id/track/open', async (req: Request, res: Response, next: NextFun
 
 router.post('/:id/track/click', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const tenantId = req.query.tenantId as string || req.body.tenantId;
+    if (!tenantId) {
+      res.status(400).json({ error: 'tenantId is required' });
+      return;
+    }
+    
     const { url } = req.body;
-    await deliveryService.trackClick(req.params.id, url);
+    await deliveryService.trackClick(req.params.id, tenantId, url);
     res.status(204).send();
   } catch (err) {
     next(err);

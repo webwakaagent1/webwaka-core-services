@@ -99,9 +99,18 @@ export class DeliveryService {
     }
   }
 
-  async trackOpen(notificationId: string): Promise<void> {
+  async trackOpen(notificationId: string, tenantId: string): Promise<void> {
     const client = await pool.connect();
     try {
+      const verifyResult = await client.query(
+        'SELECT id FROM notifications WHERE id = $1 AND tenant_id = $2',
+        [notificationId, tenantId]
+      );
+      
+      if (verifyResult.rows.length === 0) {
+        throw new Error('Notification not found or access denied');
+      }
+      
       await client.query(
         `UPDATE delivery_logs SET opened_at = NOW() 
          WHERE notification_id = $1 AND opened_at IS NULL`,
@@ -110,8 +119,8 @@ export class DeliveryService {
 
       await client.query(
         `UPDATE notifications SET metadata = metadata || $1 
-         WHERE id = $2`,
-        [JSON.stringify({ openedAt: new Date().toISOString() }), notificationId]
+         WHERE id = $2 AND tenant_id = $3`,
+        [JSON.stringify({ openedAt: new Date().toISOString() }), notificationId, tenantId]
       );
 
       logger.info('Notification opened', { notificationId });
@@ -120,9 +129,18 @@ export class DeliveryService {
     }
   }
 
-  async trackClick(notificationId: string, linkUrl?: string): Promise<void> {
+  async trackClick(notificationId: string, tenantId: string, linkUrl?: string): Promise<void> {
     const client = await pool.connect();
     try {
+      const verifyResult = await client.query(
+        'SELECT id FROM notifications WHERE id = $1 AND tenant_id = $2',
+        [notificationId, tenantId]
+      );
+      
+      if (verifyResult.rows.length === 0) {
+        throw new Error('Notification not found or access denied');
+      }
+      
       await client.query(
         `UPDATE delivery_logs SET clicked_at = NOW() 
          WHERE notification_id = $1`,
@@ -131,8 +149,8 @@ export class DeliveryService {
 
       await client.query(
         `UPDATE notifications SET metadata = metadata || $1 
-         WHERE id = $2`,
-        [JSON.stringify({ clickedAt: new Date().toISOString(), clickedLink: linkUrl }), notificationId]
+         WHERE id = $2 AND tenant_id = $3`,
+        [JSON.stringify({ clickedAt: new Date().toISOString(), clickedLink: linkUrl }), notificationId, tenantId]
       );
 
       logger.info('Notification clicked', { notificationId, linkUrl });
@@ -141,13 +159,24 @@ export class DeliveryService {
     }
   }
 
-  async getDeliveryLogs(notificationId: string): Promise<DeliveryLog[]> {
+  async getDeliveryLogs(notificationId: string, tenantId?: string): Promise<DeliveryLog[]> {
     const client = await pool.connect();
     try {
-      const result = await client.query(
-        'SELECT * FROM delivery_logs WHERE notification_id = $1 ORDER BY created_at DESC',
-        [notificationId]
-      );
+      let query = `
+        SELECT d.* FROM delivery_logs d
+        JOIN notifications n ON d.notification_id = n.id
+        WHERE d.notification_id = $1
+      `;
+      const params: any[] = [notificationId];
+      
+      if (tenantId) {
+        query += ' AND n.tenant_id = $2';
+        params.push(tenantId);
+      }
+      
+      query += ' ORDER BY d.created_at DESC';
+      
+      const result = await client.query(query, params);
       return result.rows.map(this.mapRowToDeliveryLog);
     } finally {
       client.release();
@@ -155,6 +184,10 @@ export class DeliveryService {
   }
 
   async getStats(filter: NotificationFilter): Promise<NotificationStats> {
+    if (!filter.tenantId) {
+      throw new Error('tenantId is required for stats');
+    }
+    
     const client = await pool.connect();
     try {
       let query = `
@@ -165,15 +198,10 @@ export class DeliveryService {
           COUNT(*) FILTER (WHERE status = 'delivered') as delivered,
           COUNT(*) FILTER (WHERE status = 'failed') as failed
         FROM notifications
-        WHERE 1=1
+        WHERE tenant_id = $1
       `;
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (filter.tenantId) {
-        query += ` AND tenant_id = $${paramCount++}`;
-        values.push(filter.tenantId);
-      }
+      const values: any[] = [filter.tenantId];
+      let paramCount = 2;
       if (filter.channel) {
         query += ` AND channel = $${paramCount++}`;
         values.push(filter.channel);

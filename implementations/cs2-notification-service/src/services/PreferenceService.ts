@@ -45,13 +45,18 @@ export class PreferenceService {
     }
   }
 
-  async getPreference(id: string): Promise<UserPreference | null> {
+  async getPreference(id: string, tenantId?: string): Promise<UserPreference | null> {
     const client = await pool.connect();
     try {
-      const result = await client.query(
-        'SELECT * FROM user_preferences WHERE id = $1',
-        [id]
-      );
+      let query = 'SELECT * FROM user_preferences WHERE id = $1';
+      const params: any[] = [id];
+      
+      if (tenantId) {
+        query += ' AND tenant_id = $2';
+        params.push(tenantId);
+      }
+      
+      const result = await client.query(query, params);
       return result.rows.length > 0 ? this.mapRowToPreference(result.rows[0]) : null;
     } finally {
       client.release();
@@ -88,7 +93,7 @@ export class PreferenceService {
     }
   }
 
-  async updatePreference(id: string, input: UpdateUserPreferenceInput): Promise<UserPreference> {
+  async updatePreference(id: string, input: UpdateUserPreferenceInput, tenantId?: string): Promise<UserPreference> {
     const client = await pool.connect();
     try {
       const setClauses: string[] = ['updated_at = NOW()'];
@@ -121,14 +126,19 @@ export class PreferenceService {
       }
 
       values.push(id);
+      let query = `UPDATE user_preferences SET ${setClauses.join(', ')} WHERE id = $${paramCount++}`;
+      
+      if (tenantId) {
+        query += ` AND tenant_id = $${paramCount}`;
+        values.push(tenantId);
+      }
+      
+      query += ' RETURNING *';
 
-      const result = await client.query(
-        `UPDATE user_preferences SET ${setClauses.join(', ')} WHERE id = $${paramCount} RETURNING *`,
-        values
-      );
+      const result = await client.query(query, values);
 
       if (result.rows.length === 0) {
-        throw new Error(`Preference not found: ${id}`);
+        throw new Error(`Preference not found or access denied: ${id}`);
       }
 
       const preference = this.mapRowToPreference(result.rows[0]);
@@ -160,10 +170,24 @@ export class PreferenceService {
     return this.createPreference(input);
   }
 
-  async deletePreference(id: string): Promise<void> {
+  async deletePreference(id: string, tenantId?: string): Promise<void> {
     const client = await pool.connect();
     try {
-      await client.query('DELETE FROM user_preferences WHERE id = $1', [id]);
+      let query = 'DELETE FROM user_preferences WHERE id = $1';
+      const params: any[] = [id];
+      
+      if (tenantId) {
+        query += ' AND tenant_id = $2';
+        params.push(tenantId);
+      }
+      
+      query += ' RETURNING id';
+      const result = await client.query(query, params);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Preference not found or access denied: ${id}`);
+      }
+      
       logger.info('User preference deleted', { preferenceId: id });
     } finally {
       client.release();

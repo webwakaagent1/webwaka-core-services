@@ -75,13 +75,18 @@ export class TemplateService {
     }
   }
 
-  async getTemplate(id: string): Promise<NotificationTemplate | null> {
+  async getTemplate(id: string, tenantId?: string): Promise<NotificationTemplate | null> {
     const client = await pool.connect();
     try {
-      const result = await client.query(
-        'SELECT * FROM notification_templates WHERE id = $1',
-        [id]
-      );
+      let query = 'SELECT * FROM notification_templates WHERE id = $1';
+      const params: any[] = [id];
+      
+      if (tenantId) {
+        query += ' AND (tenant_id = $2 OR tenant_id = $3)';
+        params.push(tenantId, 'system');
+      }
+      
+      const result = await client.query(query, params);
       return result.rows.length > 0 ? this.mapRowToTemplate(result.rows[0]) : null;
     } finally {
       client.release();
@@ -150,7 +155,7 @@ export class TemplateService {
     }
   }
 
-  async updateTemplate(id: string, input: UpdateTemplateInput): Promise<NotificationTemplate> {
+  async updateTemplate(id: string, tenantId: string, input: UpdateTemplateInput): Promise<NotificationTemplate> {
     const client = await pool.connect();
     try {
       const setClauses: string[] = ['updated_at = NOW()'];
@@ -186,15 +191,15 @@ export class TemplateService {
         values.push(JSON.stringify(input.metadata));
       }
 
-      values.push(id);
+      values.push(id, tenantId);
 
       const result = await client.query(
-        `UPDATE notification_templates SET ${setClauses.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+        `UPDATE notification_templates SET ${setClauses.join(', ')} WHERE id = $${paramCount++} AND tenant_id = $${paramCount} RETURNING *`,
         values
       );
 
       if (result.rows.length === 0) {
-        throw new Error(`Template not found: ${id}`);
+        throw new Error(`Template not found or access denied: ${id}`);
       }
 
       return this.mapRowToTemplate(result.rows[0]);
@@ -203,10 +208,16 @@ export class TemplateService {
     }
   }
 
-  async deleteTemplate(id: string): Promise<void> {
+  async deleteTemplate(id: string, tenantId: string): Promise<void> {
     const client = await pool.connect();
     try {
-      await client.query('DELETE FROM notification_templates WHERE id = $1', [id]);
+      const result = await client.query(
+        'DELETE FROM notification_templates WHERE id = $1 AND tenant_id = $2 RETURNING id',
+        [id, tenantId]
+      );
+      if (result.rows.length === 0) {
+        throw new Error(`Template not found or access denied: ${id}`);
+      }
       this.compiledTemplates.delete(id);
       logger.info('Template deleted', { templateId: id });
     } finally {

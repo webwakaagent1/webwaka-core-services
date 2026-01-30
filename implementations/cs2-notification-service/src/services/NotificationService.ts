@@ -26,7 +26,7 @@ export class NotificationService {
 
       if (input.templateId || (input.templateData && Object.keys(input.templateData).length > 0)) {
         const template = input.templateId
-          ? await templateService.getTemplate(input.templateId)
+          ? await templateService.getTemplate(input.templateId, input.tenantId)
           : await templateService.getTemplateBySlug(
               input.tenantId,
               (input.templateData as any)?._templateSlug || 'default',
@@ -85,10 +85,18 @@ export class NotificationService {
     }
   }
 
-  async getNotification(id: string): Promise<Notification | null> {
+  async getNotification(id: string, tenantId?: string): Promise<Notification | null> {
     const client = await pool.connect();
     try {
-      const result = await client.query('SELECT * FROM notifications WHERE id = $1', [id]);
+      let query = 'SELECT * FROM notifications WHERE id = $1';
+      const params: any[] = [id];
+      
+      if (tenantId) {
+        query += ' AND tenant_id = $2';
+        params.push(tenantId);
+      }
+      
+      const result = await client.query(query, params);
       return result.rows.length > 0 ? this.mapRowToNotification(result.rows[0]) : null;
     } finally {
       client.release();
@@ -100,16 +108,15 @@ export class NotificationService {
     limit: number = 100,
     offset: number = 0
   ): Promise<Notification[]> {
+    if (!filter.tenantId) {
+      throw new Error('tenantId is required for listing notifications');
+    }
+    
     const client = await pool.connect();
     try {
-      let query = 'SELECT * FROM notifications WHERE 1=1';
-      const values: any[] = [];
-      let paramCount = 1;
-
-      if (filter.tenantId) {
-        query += ` AND tenant_id = $${paramCount++}`;
-        values.push(filter.tenantId);
-      }
+      let query = 'SELECT * FROM notifications WHERE tenant_id = $1';
+      const values: any[] = [filter.tenantId];
+      let paramCount = 2;
       if (filter.userId) {
         query += ` AND user_id = $${paramCount++}`;
         values.push(filter.userId);
@@ -145,17 +152,17 @@ export class NotificationService {
     }
   }
 
-  async cancelNotification(id: string): Promise<Notification> {
+  async cancelNotification(id: string, tenantId: string): Promise<Notification> {
     const client = await pool.connect();
     try {
       const result = await client.query(
         `UPDATE notifications SET status = 'cancelled', updated_at = NOW() 
-         WHERE id = $1 AND status IN ('pending', 'queued') RETURNING *`,
-        [id]
+         WHERE id = $1 AND tenant_id = $2 AND status IN ('pending', 'queued') RETURNING *`,
+        [id, tenantId]
       );
 
       if (result.rows.length === 0) {
-        throw new Error(`Cannot cancel notification ${id} - not found or already processed`);
+        throw new Error(`Cannot cancel notification ${id} - not found, access denied, or already processed`);
       }
 
       logger.info('Notification cancelled', { notificationId: id });
