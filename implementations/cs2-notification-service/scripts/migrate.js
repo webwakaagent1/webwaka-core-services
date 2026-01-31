@@ -32,6 +32,28 @@ const pool = new Pool({
 });
 
 /**
+ * Wait for database to be ready with retries
+ */
+async function waitForDatabase(maxRetries = 10, delayMs = 2000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`🔌 Attempting to connect to database (attempt ${i + 1}/${maxRetries})...`);
+      await pool.query('SELECT 1');
+      console.log('✅ Database connection established');
+      return;
+    } catch (error) {
+      if (i < maxRetries - 1) {
+        console.log(`⏳ Database not ready, waiting ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error('❌ Failed to connect to database after maximum retries');
+        throw error;
+      }
+    }
+  }
+}
+
+/**
  * Get all migration files sorted by filename
  */
 async function getMigrationFiles() {
@@ -72,6 +94,9 @@ async function runMigrations() {
   console.log(`📁 Migrations directory: ${MIGRATIONS_DIR}`);
   
   try {
+    // Wait for database to be ready
+    await waitForDatabase();
+    
     const migrationFiles = await getMigrationFiles();
     console.log(`📄 Found ${migrationFiles.length} migration file(s)`);
     

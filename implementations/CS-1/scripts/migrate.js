@@ -38,6 +38,28 @@ const pool = new Pool({
 });
 
 /**
+ * Wait for database to be ready with retries
+ */
+async function waitForDatabase(maxRetries = 10, delayMs = 2000) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`🔌 Attempting to connect to database (attempt ${i + 1}/${maxRetries})...`);
+      await pool.query('SELECT 1');
+      console.log('✅ Database connection established');
+      return;
+    } catch (error) {
+      if (i < maxRetries - 1) {
+        console.log(`⏳ Database not ready, waiting ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error('❌ Failed to connect to database after maximum retries');
+        throw error;
+      }
+    }
+  }
+}
+
+/**
  * Run all migrations in order
  */
 async function runMigrations() {
@@ -45,6 +67,8 @@ async function runMigrations() {
   console.log(`📁 Migrations directory: ${MIGRATIONS_DIR}`);
   
   try {
+    // Wait for database to be ready
+    await waitForDatabase();
     // Check if migrations directory exists
     if (!fs.existsSync(MIGRATIONS_DIR)) {
       console.error(`ERROR: Migrations directory not found: ${MIGRATIONS_DIR}`);
