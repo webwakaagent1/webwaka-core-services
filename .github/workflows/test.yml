@@ -29,7 +29,7 @@ jobs:
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
-        run: npm ci
+        run: npm install
       
       - name: Run tests
         working-directory: ./implementations/${{ matrix.implementation }}
