@@ -139,7 +139,7 @@ export class AuditLogQuery {
   private filters: Record<string, any> = {};
   private limit: number = 100;
   private offset: number = 0;
-  private sortBy: string = 'timestamp';
+  private _sortBy: string = 'timestamp';
   private sortOrder: 'asc' | 'desc' = 'desc';
 
   /**
@@ -228,8 +228,8 @@ export class AuditLogQuery {
   /**
    * Set sort order
    */
-  sortBy(field: string, order: 'asc' | 'desc' = 'desc'): this {
-    this.sortBy = field;
+  setSortBy(field: string, order: 'asc' | 'desc' = 'desc'): this {
+    this._sortBy = field;
     this.sortOrder = order;
     return this;
   }
@@ -245,7 +245,7 @@ export class AuditLogQuery {
         offset: this.offset
       },
       sort: {
-        field: this.sortBy,
+        field: this._sortBy,
         order: this.sortOrder
       }
     };
