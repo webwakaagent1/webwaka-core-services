@@ -4,6 +4,8 @@
  * Global configuration and utilities for tests
  */
 
+import { pool } from '../src/config/database';
+
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.DB_HOST = process.env.TEST_DB_HOST || 'localhost';
@@ -40,3 +42,25 @@ jest.setTimeout(30000);
   warn: jest.fn(),
   error: jest.fn()
 };
+
+// Global setup: Create standard accounts for all tests
+beforeAll(async () => {
+  try {
+    // Check if standard accounts already exist
+    const result = await pool.query(
+      "SELECT COUNT(*) as count FROM accounts WHERE account_code = '1000-0001'"
+    );
+    
+    if (parseInt(result.rows[0].count) === 0) {
+      // Create standard accounts for test tenant
+      const testTenantId = '550e8400-e29b-41d4-a716-446655440000';
+      await pool.query('SELECT create_standard_accounts($1)', [testTenantId]);
+      console.error('✅ Standard accounts created for test tenant');
+    } else {
+      console.error('✅ Standard accounts already exist');
+    }
+  } catch (error) {
+    console.error('❌ Failed to create standard accounts:', error);
+    throw error;
+  }
+});
