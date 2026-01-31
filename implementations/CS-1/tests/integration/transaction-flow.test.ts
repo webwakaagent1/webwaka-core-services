@@ -14,6 +14,7 @@ describe('Transaction Flow Integration Tests', () => {
   const testTenantId = '550e8400-e29b-41d4-a716-446655440000';
   const merchantId = '660e8400-e29b-41d4-a716-446655440000';
   const agentId = '770e8400-e29b-41d4-a716-446655440000';
+  const platformId = '880e8400-e29b-41d4-a716-446655440000';
   
   beforeAll(async () => {
     // Test database connection
@@ -208,7 +209,7 @@ describe('Transaction Flow Integration Tests', () => {
         amount: '500.00',
         currency: 'NGN',
         actorType: ActorType.PLATFORM,
-        actorId: 'platform-001',
+        actorId: platformId,
         description: 'Integration test - Platform fee',
         metadata: {
           feeType: 'transaction_fee',
