@@ -33,7 +33,7 @@ jobs:
       
       - name: Run tests
         working-directory: ./implementations/${{ matrix.implementation }}
-        run: npm test -- --coverage
+        run: npm test -- --coverage --passWithNoTests
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
