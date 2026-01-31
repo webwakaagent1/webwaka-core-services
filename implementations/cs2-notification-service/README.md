@@ -68,3 +68,8 @@ See [ARCH_CS2_NOTIFICATION_SERVICE.md](../../docs/architecture/ARCH_CS2_NOTIFICA
 ## License
 
 PROPRIETARY - WebWaka Team
+
+
+## CI/CD Pipeline
+
+This implementation is protected by automated CI/CD pipelines that enforce quality gates.
