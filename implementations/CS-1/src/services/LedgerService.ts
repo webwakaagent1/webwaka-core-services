@@ -263,7 +263,7 @@ export class LedgerService {
           [transactionId, tenantId]
         );
         
-        const entries = entriesResult.rows.map(row => this.mapRowToLedgerEntry(row));
+        const entries = entriesResult.rows.map((row: any) => this.mapRowToLedgerEntry(row));
         
         return { transaction, entries };
       });
@@ -346,7 +346,7 @@ export class LedgerService {
         
         // Execute query
         const result = await client.query(query, params);
-        const transactions = result.rows.map(row => this.mapRowToTransaction(row));
+        const transactions = result.rows.map((row: any) => this.mapRowToTransaction(row));
         
         return { transactions, total };
       });
