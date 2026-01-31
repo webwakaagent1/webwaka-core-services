@@ -23,8 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: implementations/${{ matrix.implementation }}/package-lock.json
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
@@ -52,8 +50,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: implementations/${{ matrix.implementation }}/package-lock.json
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
@@ -81,8 +77,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: implementations/${{ matrix.implementation }}/package-lock.json
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
@@ -110,8 +104,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: implementations/${{ matrix.implementation }}/package-lock.json
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
@@ -139,8 +131,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.x
-          cache: 'npm'
-          cache-dependency-path: implementations/${{ matrix.implementation }}/package-lock.json
       
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
