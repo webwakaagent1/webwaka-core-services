@@ -274,20 +274,23 @@ BEGIN
   VALUES
     (p_tenant_id, '1000-0001', 'Cash', 'ASSET', 'DEBIT', 'NGN'),
     (p_tenant_id, '1000-0002', 'Accounts Receivable', 'ASSET', 'DEBIT', 'NGN'),
-    (p_tenant_id, '1000-0003', 'Inventory', 'ASSET', 'DEBIT', 'NGN');
+    (p_tenant_id, '1000-0003', 'Inventory', 'ASSET', 'DEBIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Liabilities
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
   VALUES
     (p_tenant_id, '2000-0001', 'Accounts Payable', 'LIABILITY', 'CREDIT', 'NGN'),
     (p_tenant_id, '2000-0002', 'Commission Payable', 'LIABILITY', 'CREDIT', 'NGN'),
-    (p_tenant_id, '2000-0003', 'Platform Fee Payable', 'LIABILITY', 'CREDIT', 'NGN');
+    (p_tenant_id, '2000-0003', 'Platform Fee Payable', 'LIABILITY', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Equity
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
   VALUES
     (p_tenant_id, '3000-0001', 'Owner Equity', 'EQUITY', 'CREDIT', 'NGN'),
-    (p_tenant_id, '3000-0002', 'Retained Earnings', 'EQUITY', 'CREDIT', 'NGN');
+    (p_tenant_id, '3000-0002', 'Retained Earnings', 'EQUITY', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Revenue
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
@@ -295,7 +298,8 @@ BEGIN
     (p_tenant_id, '4000-0001', 'Sales Revenue', 'REVENUE', 'CREDIT', 'NGN'),
     (p_tenant_id, '4000-0002', 'Commission Revenue', 'REVENUE', 'CREDIT', 'NGN'),
     (p_tenant_id, '4000-0003', 'Platform Fee Revenue', 'REVENUE', 'CREDIT', 'NGN'),
-    (p_tenant_id, '4000-0004', 'Service Revenue', 'REVENUE', 'CREDIT', 'NGN');
+    (p_tenant_id, '4000-0004', 'Service Revenue', 'REVENUE', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Expenses
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
@@ -304,7 +308,8 @@ BEGIN
     (p_tenant_id, '5000-0002', 'Commission Expense', 'EXPENSE', 'DEBIT', 'NGN'),
     (p_tenant_id, '5000-0003', 'Platform Fee Expense', 'EXPENSE', 'DEBIT', 'NGN'),
     (p_tenant_id, '5000-0004', 'Operating Expense', 'EXPENSE', 'DEBIT', 'NGN'),
-    (p_tenant_id, '5000-0005', 'Refund Expense', 'EXPENSE', 'DEBIT', 'NGN');
+    (p_tenant_id, '5000-0005', 'Refund Expense', 'EXPENSE', 'DEBIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
 
