@@ -5,8 +5,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Enable Row Level Security
-ALTER DATABASE webwaka_ledger SET row_security = on;
+-- Note: Row Level Security is enabled per table below
+-- (Database-level RLS setting removed to support multiple database names in different environments)
 
 -- ============================================================================
 -- ACCOUNTS TABLE
