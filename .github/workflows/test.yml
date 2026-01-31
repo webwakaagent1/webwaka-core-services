@@ -9,6 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: webwaka_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: webwaka_ledger_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     strategy:
       matrix:
         node-version: [18.x]
@@ -30,6 +46,16 @@ jobs:
       - name: Install dependencies
         working-directory: ./implementations/${{ matrix.implementation }}
         run: npm install
+      
+      - name: Run database migrations (CS-1 only)
+        if: matrix.implementation == 'CS-1'
+        working-directory: ./implementations/${{ matrix.implementation }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=test_password psql -h localhost -U webwaka_test -d webwaka_ledger_test -f migrations/001_initial_schema.sql
+        env:
+          PGPASSWORD: test_password
       
       - name: Run tests
         working-directory: ./implementations/${{ matrix.implementation }}

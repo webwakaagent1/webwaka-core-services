@@ -17,7 +17,7 @@ process.env.LOG_LEVEL = 'error'; // Reduce log noise in tests
 jest.setTimeout(30000);
 
 // Global test utilities
-global.testUtils = {
+(global as any).testUtils = {
   generateUUID: () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = Math.random() * 16 | 0;
@@ -32,7 +32,7 @@ global.testUtils = {
 };
 
 // Mock console methods to reduce noise
-global.console = {
+(global as any).console = {
   ...console,
   log: jest.fn(),
   debug: jest.fn(),
