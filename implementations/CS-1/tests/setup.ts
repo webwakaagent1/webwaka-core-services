@@ -7,13 +7,20 @@
 import { pool } from '../src/config/database';
 
 // Set test environment variables
+// Note: DATABASE_URL is set by the workflow/test environment
+// Individual DB_* variables are fallbacks for local testing
 process.env.NODE_ENV = 'test';
-process.env.DB_HOST = process.env.TEST_DB_HOST || 'localhost';
-process.env.DB_PORT = process.env.TEST_DB_PORT || '5432';
-process.env.DB_NAME = process.env.TEST_DB_NAME || 'webwaka_ledger_test';
-process.env.DB_USER = process.env.TEST_DB_USER || 'webwaka_test';
-process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'test_password';
 process.env.LOG_LEVEL = 'error'; // Reduce log noise in tests
+
+// Fallback DATABASE_URL for local testing (if not already set)
+if (!process.env.DATABASE_URL) {
+  const dbHost = process.env.TEST_DB_HOST || 'localhost';
+  const dbPort = process.env.TEST_DB_PORT || '5432';
+  const dbName = process.env.TEST_DB_NAME || 'webwaka_ledger_test';
+  const dbUser = process.env.TEST_DB_USER || 'webwaka_test';
+  const dbPassword = process.env.TEST_DB_PASSWORD || 'test_password';
+  process.env.DATABASE_URL = `postgresql://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
+}
 
 // Extend Jest timeout for integration tests
 jest.setTimeout(30000);
