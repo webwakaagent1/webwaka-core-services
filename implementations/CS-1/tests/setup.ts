@@ -62,9 +62,22 @@ beforeAll(async () => {
       // Create standard accounts for test tenant
       const testTenantId = '550e8400-e29b-41d4-a716-446655440000';
       await pool.query('SELECT create_standard_accounts($1)', [testTenantId]);
-      console.error('✅ Standard accounts created for test tenant');
+      console.error('✅ Standard accounts created for test tenant (NGN)');
     } else {
-      console.error('✅ Standard accounts already exist');
+      console.error('✅ Standard accounts already exist (NGN)');
+    }
+    
+    // Create USD accounts for multi-currency tests
+    const usdCheck = await pool.query(
+      "SELECT COUNT(*) as count FROM accounts WHERE account_code = '1000-USD-0001'"
+    );
+    
+    if (parseInt(usdCheck.rows[0].count) === 0) {
+      const testTenantId = '550e8400-e29b-41d4-a716-446655440000';
+      await pool.query('SELECT create_standard_accounts_currency($1, $2)', [testTenantId, 'USD']);
+      console.error('✅ Standard accounts created for test tenant (USD)');
+    } else {
+      console.error('✅ Standard accounts already exist (USD)');
     }
   } catch (error) {
     console.error('❌ Failed to create standard accounts:', error);
