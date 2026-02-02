@@ -9,6 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: webwaka_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: webwaka_ledger_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     strategy:
       matrix:
         node-version: [18.x]
@@ -31,8 +47,19 @@ jobs:
         working-directory: ./implementations/${{ matrix.implementation }}
         run: npm install
       
+      - name: Run database migrations
+        if: contains(fromJSON('["CS-1", "cs2-notification-service"]'), matrix.implementation)
+        working-directory: ./implementations/${{ matrix.implementation }}
+        env:
+          DATABASE_URL: postgresql://webwaka_test:test_password@localhost:5432/webwaka_ledger_test
+          NODE_ENV: test
+        run: npm run migrate
+      
       - name: Run tests
         working-directory: ./implementations/${{ matrix.implementation }}
+        env:
+          DATABASE_URL: postgresql://webwaka_test:test_password@localhost:5432/webwaka_ledger_test
+          NODE_ENV: test
         run: npm test -- --coverage --passWithNoTests
       
       - name: Upload coverage to Codecov

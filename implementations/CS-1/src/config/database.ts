@@ -8,7 +8,27 @@ import { logger } from '../utils/logger';
  * for financial transaction workloads.
  */
 
-const poolConfig: PoolConfig = {
+// Support DATABASE_URL for easier configuration (especially in tests/CI)
+const connectionString = process.env.DATABASE_URL;
+
+const poolConfig: PoolConfig = connectionString ? {
+  connectionString,
+  
+  // Connection pool settings optimized for financial workloads
+  max: parseInt(process.env.DB_POOL_MAX || '20'),
+  min: parseInt(process.env.DB_POOL_MIN || '5'),
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  
+  // Enable SSL in production
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: true,
+    ca: process.env.DB_SSL_CA
+  } : false,
+  
+  // Application name for monitoring
+  application_name: 'cs1-financial-ledger'
+} : {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'webwaka_ledger',

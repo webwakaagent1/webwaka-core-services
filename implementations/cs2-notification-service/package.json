@@ -11,7 +11,9 @@
     "test:unit": "jest --testPathPattern=tests/unit",
     "test:integration": "jest --testPathPattern=tests/integration",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "migrate": "node scripts/migrate.js",
+    "migrate:test": "NODE_ENV=test node scripts/migrate.js"
   },
   "keywords": [
     "webwaka",

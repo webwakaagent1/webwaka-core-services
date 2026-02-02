@@ -5,8 +5,8 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Enable Row Level Security
-ALTER DATABASE webwaka_ledger SET row_security = on;
+-- Note: Row Level Security is enabled per table below
+-- (Database-level RLS setting removed to support multiple database names in different environments)
 
 -- ============================================================================
 -- ACCOUNTS TABLE
@@ -274,20 +274,23 @@ BEGIN
   VALUES
     (p_tenant_id, '1000-0001', 'Cash', 'ASSET', 'DEBIT', 'NGN'),
     (p_tenant_id, '1000-0002', 'Accounts Receivable', 'ASSET', 'DEBIT', 'NGN'),
-    (p_tenant_id, '1000-0003', 'Inventory', 'ASSET', 'DEBIT', 'NGN');
+    (p_tenant_id, '1000-0003', 'Inventory', 'ASSET', 'DEBIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Liabilities
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
   VALUES
     (p_tenant_id, '2000-0001', 'Accounts Payable', 'LIABILITY', 'CREDIT', 'NGN'),
     (p_tenant_id, '2000-0002', 'Commission Payable', 'LIABILITY', 'CREDIT', 'NGN'),
-    (p_tenant_id, '2000-0003', 'Platform Fee Payable', 'LIABILITY', 'CREDIT', 'NGN');
+    (p_tenant_id, '2000-0003', 'Platform Fee Payable', 'LIABILITY', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Equity
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
   VALUES
     (p_tenant_id, '3000-0001', 'Owner Equity', 'EQUITY', 'CREDIT', 'NGN'),
-    (p_tenant_id, '3000-0002', 'Retained Earnings', 'EQUITY', 'CREDIT', 'NGN');
+    (p_tenant_id, '3000-0002', 'Retained Earnings', 'EQUITY', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Revenue
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
@@ -295,7 +298,8 @@ BEGIN
     (p_tenant_id, '4000-0001', 'Sales Revenue', 'REVENUE', 'CREDIT', 'NGN'),
     (p_tenant_id, '4000-0002', 'Commission Revenue', 'REVENUE', 'CREDIT', 'NGN'),
     (p_tenant_id, '4000-0003', 'Platform Fee Revenue', 'REVENUE', 'CREDIT', 'NGN'),
-    (p_tenant_id, '4000-0004', 'Service Revenue', 'REVENUE', 'CREDIT', 'NGN');
+    (p_tenant_id, '4000-0004', 'Service Revenue', 'REVENUE', 'CREDIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
   
   -- Expenses
   INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
@@ -304,7 +308,56 @@ BEGIN
     (p_tenant_id, '5000-0002', 'Commission Expense', 'EXPENSE', 'DEBIT', 'NGN'),
     (p_tenant_id, '5000-0003', 'Platform Fee Expense', 'EXPENSE', 'DEBIT', 'NGN'),
     (p_tenant_id, '5000-0004', 'Operating Expense', 'EXPENSE', 'DEBIT', 'NGN'),
-    (p_tenant_id, '5000-0005', 'Refund Expense', 'EXPENSE', 'DEBIT', 'NGN');
+    (p_tenant_id, '5000-0005', 'Refund Expense', 'EXPENSE', 'DEBIT', 'NGN')
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to create standard accounts for a tenant in a specific currency
+CREATE OR REPLACE FUNCTION create_standard_accounts_currency(p_tenant_id UUID, p_currency VARCHAR(3))
+RETURNS VOID AS $$
+BEGIN
+  -- Assets
+  INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
+  VALUES
+    (p_tenant_id, '1000-' || p_currency || '-0001', 'Cash (' || p_currency || ')', 'ASSET', 'DEBIT', p_currency),
+    (p_tenant_id, '1000-' || p_currency || '-0002', 'Accounts Receivable (' || p_currency || ')', 'ASSET', 'DEBIT', p_currency),
+    (p_tenant_id, '1000-' || p_currency || '-0003', 'Inventory (' || p_currency || ')', 'ASSET', 'DEBIT', p_currency)
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
+  
+  -- Liabilities
+  INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
+  VALUES
+    (p_tenant_id, '2000-' || p_currency || '-0001', 'Accounts Payable (' || p_currency || ')', 'LIABILITY', 'CREDIT', p_currency),
+    (p_tenant_id, '2000-' || p_currency || '-0002', 'Commission Payable (' || p_currency || ')', 'LIABILITY', 'CREDIT', p_currency),
+    (p_tenant_id, '2000-' || p_currency || '-0003', 'Platform Fee Payable (' || p_currency || ')', 'LIABILITY', 'CREDIT', p_currency)
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
+  
+  -- Equity
+  INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
+  VALUES
+    (p_tenant_id, '3000-' || p_currency || '-0001', 'Owner Equity (' || p_currency || ')', 'EQUITY', 'CREDIT', p_currency),
+    (p_tenant_id, '3000-' || p_currency || '-0002', 'Retained Earnings (' || p_currency || ')', 'EQUITY', 'CREDIT', p_currency)
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
+  
+  -- Revenue
+  INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
+  VALUES
+    (p_tenant_id, '4000-' || p_currency || '-0001', 'Sales Revenue (' || p_currency || ')', 'REVENUE', 'CREDIT', p_currency),
+    (p_tenant_id, '4000-' || p_currency || '-0002', 'Commission Revenue (' || p_currency || ')', 'REVENUE', 'CREDIT', p_currency),
+    (p_tenant_id, '4000-' || p_currency || '-0003', 'Platform Fee Revenue (' || p_currency || ')', 'REVENUE', 'CREDIT', p_currency),
+    (p_tenant_id, '4000-' || p_currency || '-0004', 'Service Revenue (' || p_currency || ')', 'REVENUE', 'CREDIT', p_currency)
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
+  
+  -- Expenses
+  INSERT INTO accounts (tenant_id, account_code, account_name, account_type, normal_balance, currency)
+  VALUES
+    (p_tenant_id, '5000-' || p_currency || '-0001', 'Cost of Goods Sold (' || p_currency || ')', 'EXPENSE', 'DEBIT', p_currency),
+    (p_tenant_id, '5000-' || p_currency || '-0002', 'Commission Expense (' || p_currency || ')', 'EXPENSE', 'DEBIT', p_currency),
+    (p_tenant_id, '5000-' || p_currency || '-0003', 'Platform Fee Expense (' || p_currency || ')', 'EXPENSE', 'DEBIT', p_currency),
+    (p_tenant_id, '5000-' || p_currency || '-0004', 'Operating Expense (' || p_currency || ')', 'EXPENSE', 'DEBIT', p_currency),
+    (p_tenant_id, '5000-' || p_currency || '-0005', 'Refund Expense (' || p_currency || ')', 'EXPENSE', 'DEBIT', p_currency)
+  ON CONFLICT (tenant_id, account_code) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
 
