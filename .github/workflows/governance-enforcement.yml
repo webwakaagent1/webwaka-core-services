@@ -1,0 +1,98 @@
+name: Governance Enforcement
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+  issues:
+    types: [opened, edited]
+
+jobs:
+  enforce-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for acting role declaration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue?.body || context.payload.pull_request?.body || "";
+            if (!body.includes("Acting Role") && !body.includes("acting_role")) {
+              core.setFailed("❌ Missing Acting Role declaration. All work must declare which role is executing.");
+            }
+
+      - name: Check for Founder Decision reference
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue?.body || context.payload.pull_request?.body || "";
+            if (!body.match(/FD-\d{4}-\d{3}/) && !body.includes("Founder Decision")) {
+              core.setFailed("❌ Missing Founder Decision reference. All work must reference a valid Founder Decision (FD-YYYY-NNN).");
+            }
+
+      - name: Check for acceptance criteria
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue?.body || context.payload.pull_request?.body || "";
+            if (!body.includes("Acceptance Criteria") && !body.includes("acceptance_criteria")) {
+              core.setFailed("❌ Missing Acceptance Criteria section. All work must define verifiable completion criteria.");
+            }
+
+      - name: Prevent silent PRs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || "";
+            if (body.length < 200) {
+              core.setFailed("❌ PR description too short. Likely missing required context. Minimum 200 characters required.");
+            }
+
+      - name: Check for context references
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue?.body || context.payload.pull_request?.body || "";
+            if (!body.includes("Issue:") && !body.includes("PR:") && !body.includes("Doc:") && !body.includes("Decision:")) {
+              core.warning("⚠️ No context references found. Consider linking related issues, PRs, docs, or decisions.");
+            }
+
+      - name: Verify no hardcoded secrets
+        run: |
+          if grep -r "password\|secret\|api_key\|token" --include="*.js" --include="*.ts" --include="*.py" --include="*.java" . 2>/dev/null | grep -v "node_modules" | grep -v ".git" | grep -v "test"; then
+            echo "⚠️ Potential hardcoded secrets detected. Please review."
+          fi
+
+      - name: Comment on governance status
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const { context } = require('@actions/github');
+            const body = context.payload.issue?.body || context.payload.pull_request?.body || "";
+            
+            let status = "✅ Governance checks passed";
+            let details = [];
+            
+            if (!body.includes("Acting Role")) {
+              status = "❌ Governance checks failed";
+              details.push("- Missing Acting Role declaration");
+            }
+            if (!body.match(/FD-\d{4}-\d{3}/)) {
+              status = "❌ Governance checks failed";
+              details.push("- Missing Founder Decision reference");
+            }
+            if (!body.includes("Acceptance Criteria")) {
+              status = "❌ Governance checks failed";
+              details.push("- Missing Acceptance Criteria");
+            }
+            
+            if (details.length > 0) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${status}\n\n${details.join('\n')}\n\nPlease update this issue/PR to comply with governance requirements.`
+              });
+            }
